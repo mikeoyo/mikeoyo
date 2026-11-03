@@ -38,33 +38,35 @@ def seg(vid, anchors, style='normal', cut='blur'):
     SEGS.append(dict(vid=vid, anchors=anchors, style=style, cut=cut))
 
 
-# intro: slow-mo engage fading up from black, then four 1-beat flash teasers
-seg('348', [(TB(0.0), 76.85), (4, 77.45)], style='intro', cut='hard')
-seg('348', [(4, 88.37), (5, 88.57)], style='teaser', cut='flash')
-seg('345', [(5, 14.27), (6, 14.47)], style='teaser', cut='flash')
-seg('346', [(6, 10.37), (7, 10.57)], style='teaser', cut='flash')
-seg('348', [(7, 94.67), (8, 94.87)], style='teaser', cut='flash')
+# intro: engage fading up from black, then four 1-beat flash teasers, all at real speed
+seg('348', [(TB(0.0), 75.4), (4, 77.05)], style='intro', cut='hard')
+seg('348', [(4, 88.3), (5, 88.71)], style='teaser', cut='flash')
+seg('345', [(5, 14.2), (6, 14.61)], style='teaser', cut='flash')
+seg('346', [(6, 10.3), (7, 10.71)], style='teaser', cut='flash')
+seg('348', [(7, 84.2), (8, 84.61)], style='teaser', cut='flash')
 
 
 def single(vid, k, s, slow):
-    if slow:   # approach -> kill on the bar downbeat -> deep slow-mo -> snap back
-        seg(vid, [(s, k - 2.3), (s + 4, k), (s + 5.5, k + 0.17), (s + 8, k + 1.2)])
-    else:      # rush in at ~1.6x and straight through the kill
+    if slow:   # the flashiest kills: rush in, short slow-mo on the hit, snap back
+        seg(vid, [(s, k - 2.5), (s + 4, k), (s + 5.25, k + 0.15), (s + 8, k + 1.45)])
+    else:      # rush in at ~1.6x and straight through the kill on the bar downbeat
         seg(vid, [(s, k - 2.7), (s + 4, k), (s + 8, k + 2.0)])
 
 
-# section A (beats 8-64): seven solo kills on bar downbeats, only two in slow-mo
-for i, (vid, k, slow) in enumerate([('347', 5.27, False), ('347', 29.27, True), ('347', 52.27, False),
+# section A (beats 8-64): seven solo kills on bar downbeats; slow-mo only on the two
+# biggest-looking ones (347 52s red explosion, 348 4s 横扫千军 burst)
+for i, (vid, k, slow) in enumerate([('347', 5.27, False), ('347', 29.27, False), ('347', 52.27, True),
                                     ('347', 59.27, False), ('348', 4.17, True), ('348', 10.07, False),
                                     ('348', 47.77, False)]):
     single(vid, k, 8 + 8 * i, slow)
 
-# section B (beats 64-124): the two triple kills, played near real time
-seg('346', [(64, 1.6), (72, 4.97), (80, 8.87), (84, 10.37), (86, 10.55), (92, 13.1)], cut='flash')
-seg('345', [(92, 4.4), (100, 7.77), (103, 9.07), (116, 14.27), (124, 17.3)])
-# section C (beats 124-end): rapid quadra kill in real time, slow-mo on the 4th, then the team wipe
-seg('348', [(124, 71.0), (128, 74.6), (146, 82.57), (150, 84.27), (156, 86.87), (160, 88.37),
-            (162, 88.55), (176, 94.67), (184, 97.0), (TB(DUR) + 0.05, 97.6)], style='finale')
+# section B (beats 64-124): the two triple kills in real time, short slow-mo on each third kill
+seg('346', [(64, 1.6), (72, 4.97), (80, 8.87), (83, 9.99), (84, 10.37), (85.25, 10.52), (92, 13.4)], cut='flash')
+seg('345', [(92, 4.4), (100, 7.77), (103, 9.07), (115, 13.86), (116, 14.27), (117.25, 14.42), (124, 17.0)])
+# section C (beats 124-end): the five-kill team fight in real time; only the last kill
+# (the team wipe) drops into slow-mo, which carries through the ending
+seg('348', [(124, 70.5), (128, 73.5), (150, 82.57), (154, 84.27), (160, 86.87), (164, 88.37),
+            (179, 94.26), (180, 94.67), (183, 95.0), (TB(DUR) + 0.05, 96.3)], style='finale')
 
 for sg in SEGS:
     bs = np.array([a[0] for a in sg['anchors']], float)
@@ -82,17 +84,15 @@ for i in range(7):
     PUNCH.append((B(12 + 8 * i), 1.15))
 for b in (4, 5, 6, 7):
     PUNCH.append((B(b), 1.2)); FLASH.append((B(b), 0.7))
-# multi-kill beats (2nd/3rd/4th kill of a streak hit harder)
+# multi-kill beats (2nd/3rd/4th/5th kill of a streak hit harder)
 MULTI = [(B(80), 1.3), (B(84), 1.6), (B(103), 1.3), (B(116), 1.6),
-         (B(150), 1.3), (B(156), 1.5), (B(160), 2.0), (B(176), 1.7)]
-PUNCH += [(B(72), 1.1), (B(100), 1.1), (B(146), 1.15)] + MULTI
+         (B(154), 1.3), (B(160), 1.5), (B(164), 1.8), (B(180), 2.0)]
+PUNCH += [(B(72), 1.1), (B(100), 1.1), (B(150), 1.15)] + MULTI
 IMPACTS = [t for t, _ in MULTI]          # sub-boom SFX in the audio mix
-SHAKE = [(B(84), 1.0), (B(116), 1.0), (B(160), 1.4)]   # only the biggest moments shake
+FINAL_KILL = B(180)
 FLASH += [(B(64), 0.9), (B(128), 0.9), (B(8), 0.6)]
 for t, s in PUNCH:
     FLASH.append((t, 0.25 + 0.15 * s))
-for b in range(68, 184, 4):               # bar-downbeat flicker in the drops
-    FLASH.append((B(b), 0.08))
 DROPS = [B(64), B(128)]
 CUTS = [(sg['t0'], sg['cut']) for sg in SEGS[1:]]
 RISERS = [(B(60), B(64)), (B(124), B(128))]
@@ -212,35 +212,27 @@ def render(n):
 
     # ---- camera: zoom punches, beat pulses, risers, shake
     Z = 1.0; shx = shy = rot = 0.0; rgb = 0.0
+    # no screen shake anywhere: a soft zoom-in on each kill is the only camera hit
     for t0, st in PUNCH:
         dt = T - t0
         if -0.05 < dt < 1.2:
-            Z += 0.075 * st * env_punch(dt)
+            Z += 0.04 * st * env_punch(dt, decay=0.25, attack=0.05)
             if dt >= 0:
-                rgb += 7 * st * math.exp(-dt / 0.1)
-    for t0, st in SHAKE:
-        dt = T - t0
-        if 0 <= dt < 0.5:
-            se = math.exp(-dt / 0.09)
-            shx += 7 * st * se * math.sin(2 * math.pi * 17 * dt)
-            shy += 5 * st * se * math.cos(2 * math.pi * 13 * dt)
+                rgb += 4 * st * math.exp(-dt / 0.08)
     for t0 in DROPS:
         dt = T - t0
         if 0 <= dt < 1.5:
-            Z += 0.2 * math.exp(-dt / 0.25)
-            rgb += 12 * math.exp(-dt / 0.15)
+            Z += 0.1 * math.exp(-dt / 0.3)
+            rgb += 7 * math.exp(-dt / 0.12)
     for a, b in RISERS:
         if a <= T < b:
             u = (T - a) / (b - a)
-            Z += 0.10 * u ** 2
-            rgb += 5 * u ** 2
-    bt = TB(T); dtb = (bt - math.floor(bt)) * P
-    if B(64) <= T < B(184):       # gentle zoom pulse on the kicks in the drops
-        Z += 0.012 * math.exp(-dtb / 0.09)
-    if style == 'finale' and T > B(184):
-        Z += 0.07 * min(1, (T - B(184)) / 3.0)
+            Z += 0.06 * u ** 2
+            rgb += 3 * u ** 2
+    if style == 'finale' and T > FINAL_KILL:   # slow push-in through the final slow-mo
+        Z += 0.08 * min(1, (T - FINAL_KILL) / 4.5)
     if style == 'intro':
-        Z += 0.12 * (1 - T / B(4))
+        Z += 0.06 * (1 - T / B(4))
 
     k = (W / SW) * Z
     c, s_ = math.cos(math.radians(rot)), math.sin(math.radians(rot))
@@ -256,12 +248,12 @@ def render(n):
         if kind == 'blur' and -0.1 < dt < 0.1:
             amt = 0.1 * (1 - abs(dt) / 0.1)
             out = radial_blur(out, amt, W * 0.5, H * 0.52)
-            rgb += 10 * (1 - abs(dt) / 0.1)
+            rgb += 5 * (1 - abs(dt) / 0.1)
     for a, b in RISERS:          # rushing zoom-blur through the risers
         if a + 0.4 <= T < b:
             out = radial_blur(out, 0.05 * (T - a - 0.4) / (b - a - 0.4), W * 0.5, H * 0.52)
     if style == 'teaser':
-        rgb += 6
+        rgb += 3
 
     if rgb > 0.8:
         d = int(round(rgb))

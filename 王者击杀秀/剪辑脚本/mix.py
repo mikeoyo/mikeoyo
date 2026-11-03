@@ -11,8 +11,8 @@ import montage as M
 
 SR = 44100
 ROOT = M.ROOT
-GAME_GAIN = 0.5      # game sound about 7 dB under the music
-MUSIC_GAIN = 0.8
+GAME_GAIN = 0.85     # game sound about as loud as the music
+MUSIC_GAIN = 0.72
 
 
 def readwav(p):
@@ -52,7 +52,7 @@ def wsola():
         g = src[max(p, 0):max(p, 0) + L]
         if len(g) < L:
             g = np.pad(g, (0, L - len(g)))
-        gain = 1.0 if sp > 0.5 else 0.75                 # a touch lower in deep slow-mo
+        gain = 1.0 if sp > 0.5 else 0.85                 # a touch lower in deep slow-mo
         out[o:o + L] += win * g * gain
         prev = (sg, p)
     return out[:N]
@@ -73,7 +73,7 @@ def boom(dur, amp):
 
 sfx = np.zeros(N, np.float32)
 for t0 in M.IMPACTS:
-    amp = 0.32 if abs(t0 - M.B(160)) < 0.01 else 0.2
+    amp = 0.32 if abs(t0 - M.FINAL_KILL) < 0.01 else 0.2
     b = boom(1.2, amp); i = int(t0 * SR)
     sfx[i:i + len(b)] += b[:max(0, N - i)]
 
@@ -81,7 +81,10 @@ mix = music * MUSIC_GAIN + (game + sfx)[:, None]
 fade = np.clip((M.DUR - 0.05 - t) / 0.85, 0, 1) ** 1.5
 fade *= np.clip(t / 0.05, 0, 1)
 mix *= fade[:, None]
-mix *= 0.7          # headroom: written at -3 dB, ffmpeg brings it back up through a limiter
+pk = np.abs(mix).max()
+mix *= 0.7 / max(pk, 1.0)   # headroom; ffmpeg brings the level back up through a limiter
+print('pre-limiter peak %.2f' % pk)
+open(os.path.join(ROOT, 'out/mix_gain.txt'), 'w').write('%.4f' % (max(pk, 1.0) / 0.7))
 assert np.abs(mix).max() < 1.0
 out = os.path.join(ROOT, 'out/mix.wav')
 w = wave.open(out, 'wb'); w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
