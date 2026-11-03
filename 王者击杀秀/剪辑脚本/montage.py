@@ -46,25 +46,25 @@ seg('346', [(6, 10.37), (7, 10.57)], style='teaser', cut='flash')
 seg('348', [(7, 94.67), (8, 94.87)], style='teaser', cut='flash')
 
 
-def single(vid, k, s):
-    # fast approach -> kill on the bar downbeat -> deep slow-mo -> snap back
-    seg(vid, [(s, k - 2.3), (s + 4, k), (s + 5.5, k + 0.17), (s + 8, k + 1.2)])
+def single(vid, k, s, slow):
+    if slow:   # approach -> kill on the bar downbeat -> deep slow-mo -> snap back
+        seg(vid, [(s, k - 2.3), (s + 4, k), (s + 5.5, k + 0.17), (s + 8, k + 1.2)])
+    else:      # rush in at ~1.6x and straight through the kill
+        seg(vid, [(s, k - 2.7), (s + 4, k), (s + 8, k + 2.0)])
 
 
-# section A (beats 8-64): seven solo kills, each on a bar downbeat
-for i, (vid, k) in enumerate([('347', 5.27), ('347', 29.27), ('347', 52.27), ('347', 59.27),
-                              ('348', 4.17), ('348', 10.07), ('348', 47.77)]):
-    single(vid, k, 8 + 8 * i)
+# section A (beats 8-64): seven solo kills on bar downbeats, only two in slow-mo
+for i, (vid, k, slow) in enumerate([('347', 5.27, False), ('347', 29.27, True), ('347', 52.27, False),
+                                    ('347', 59.27, False), ('348', 4.17, True), ('348', 10.07, False),
+                                    ('348', 47.77, False)]):
+    single(vid, k, 8 + 8 * i, slow)
 
-# section B (beats 64-124): the two triple kills
-seg('346', [(64, 2.2), (72, 4.97), (73.5, 5.15), (80, 8.87), (81, 9.02),
-            (84, 10.37), (86, 10.55), (92, 13.1)], cut='flash')
-seg('345', [(92, 4.4), (100, 7.77), (101, 7.92), (104, 9.07), (105.5, 9.25),
-            (116, 14.27), (118, 14.5), (124, 16.6)])
-# section C (beats 124-end): quadra kill + team wipe finale
-seg('348', [(124, 73.6), (128, 77.0), (140, 82.57), (141, 82.72), (144, 84.27),
-            (145.5, 84.42), (152, 86.87), (154, 87.02), (160, 88.37), (162, 88.55),
-            (176, 94.67), (178, 94.9), (184, 96.6), (TB(DUR) + 0.05, 97.45)], style='finale')
+# section B (beats 64-124): the two triple kills, played near real time
+seg('346', [(64, 1.6), (72, 4.97), (80, 8.87), (84, 10.37), (86, 10.55), (92, 13.1)], cut='flash')
+seg('345', [(92, 4.4), (100, 7.77), (103, 9.07), (116, 14.27), (124, 17.3)])
+# section C (beats 124-end): rapid quadra kill in real time, slow-mo on the 4th, then the team wipe
+seg('348', [(124, 71.0), (128, 74.6), (146, 82.57), (150, 84.27), (156, 86.87), (160, 88.37),
+            (162, 88.55), (176, 94.67), (184, 97.0), (TB(DUR) + 0.05, 97.6)], style='finale')
 
 for sg in SEGS:
     bs = np.array([a[0] for a in sg['anchors']], float)
@@ -83,15 +83,16 @@ for i in range(7):
 for b in (4, 5, 6, 7):
     PUNCH.append((B(b), 1.2)); FLASH.append((B(b), 0.7))
 # multi-kill beats (2nd/3rd/4th kill of a streak hit harder)
-MULTI = [(B(80), 1.4), (B(84), 1.65), (B(104), 1.4), (B(116), 1.65),
-         (B(144), 1.4), (B(152), 1.65), (B(160), 2.2), (B(176), 1.9)]
-PUNCH += [(B(72), 1.15), (B(100), 1.15), (B(140), 1.2)] + MULTI
+MULTI = [(B(80), 1.3), (B(84), 1.6), (B(103), 1.3), (B(116), 1.6),
+         (B(150), 1.3), (B(156), 1.5), (B(160), 2.0), (B(176), 1.7)]
+PUNCH += [(B(72), 1.1), (B(100), 1.1), (B(146), 1.15)] + MULTI
 IMPACTS = [t for t, _ in MULTI]          # sub-boom SFX in the audio mix
-FLASH += [(B(64), 0.95), (B(128), 0.95), (B(8), 0.6)]
+SHAKE = [(B(84), 1.0), (B(116), 1.0), (B(160), 1.4)]   # only the biggest moments shake
+FLASH += [(B(64), 0.9), (B(128), 0.9), (B(8), 0.6)]
 for t, s in PUNCH:
-    FLASH.append((t, 0.3 + 0.18 * s))
+    FLASH.append((t, 0.25 + 0.15 * s))
 for b in range(68, 184, 4):               # bar-downbeat flicker in the drops
-    FLASH.append((B(b), 0.14))
+    FLASH.append((B(b), 0.08))
 DROPS = [B(64), B(128)]
 CUTS = [(sg['t0'], sg['cut']) for sg in SEGS[1:]]
 RISERS = [(B(60), B(64)), (B(124), B(128))]
@@ -214,32 +215,28 @@ def render(n):
     for t0, st in PUNCH:
         dt = T - t0
         if -0.05 < dt < 1.2:
-            Z += 0.095 * st * env_punch(dt)
+            Z += 0.075 * st * env_punch(dt)
             if dt >= 0:
-                se = math.exp(-dt / 0.17)
-                shx += 18 * st * se * math.sin(2 * math.pi * 23 * dt + t0)
-                shy += 14 * st * se * math.cos(2 * math.pi * 19 * dt + 2 * t0)
-                rot += 0.9 * st * se * math.sin(2 * math.pi * 11 * dt)
-                rgb += 10 * st * math.exp(-dt / 0.12)
+                rgb += 7 * st * math.exp(-dt / 0.1)
+    for t0, st in SHAKE:
+        dt = T - t0
+        if 0 <= dt < 0.5:
+            se = math.exp(-dt / 0.09)
+            shx += 7 * st * se * math.sin(2 * math.pi * 17 * dt)
+            shy += 5 * st * se * math.cos(2 * math.pi * 13 * dt)
     for t0 in DROPS:
         dt = T - t0
         if 0 <= dt < 1.5:
-            Z += 0.25 * math.exp(-dt / 0.25)
-            rgb += 16 * math.exp(-dt / 0.15)
+            Z += 0.2 * math.exp(-dt / 0.25)
+            rgb += 12 * math.exp(-dt / 0.15)
     for a, b in RISERS:
         if a <= T < b:
             u = (T - a) / (b - a)
-            Z += 0.12 * u ** 2
-            shx += 9 * u * math.sin(T * 90); shy += 9 * u * math.cos(T * 77)
-            rgb += 7 * u ** 2
+            Z += 0.10 * u ** 2
+            rgb += 5 * u ** 2
     bt = TB(T); dtb = (bt - math.floor(bt)) * P
-    if B(64) <= T < B(184):       # every kick in the drops
-        e = math.exp(-dtb / 0.09)
-        Z += 0.03 * e
-        shx += 5 * e * math.sin(bt * 7.1); shy += 4 * e * math.cos(bt * 5.3)
-        rgb += 3 * e
-    elif B(8) <= T < B(64):
-        Z += 0.018 * math.exp(-dtb / 0.09)
+    if B(64) <= T < B(184):       # gentle zoom pulse on the kicks in the drops
+        Z += 0.012 * math.exp(-dtb / 0.09)
     if style == 'finale' and T > B(184):
         Z += 0.07 * min(1, (T - B(184)) / 3.0)
     if style == 'intro':

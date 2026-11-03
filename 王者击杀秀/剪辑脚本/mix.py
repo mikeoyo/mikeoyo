@@ -1,4 +1,9 @@
-"""Audio for the montage: BGM + time-remapped game sound + impact booms."""
+"""Audio for the montage: BGM + game sound that follows every speed ramp + impact booms.
+
+The game sound is time-stretched with WSOLA (waveform-similarity overlap-add),
+so it keeps its normal pitch at 0.2x slow-mo and at 2x fast-forward alike, and
+plays under the whole video instead of only the real-time stretches.
+"""
 import os, sys, wave
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -6,6 +11,8 @@ import montage as M
 
 SR = 44100
 ROOT = M.ROOT
+GAME_GAIN = 0.5      # game sound about 7 dB under the music
+MUSIC_GAIN = 0.8
 
 
 def readwav(p):
@@ -21,23 +28,37 @@ if len(music) < N:
     music = np.vstack([music, np.zeros((N - len(music), 2), np.float32)])
 
 games = {v: readwav(os.path.join(ROOT, f'audio/game_{v}.wav'))[:, 0] for v in ('345', '346', '347', '348')}
-game = np.zeros(N, np.float32)
-gain = np.zeros(N, np.float32)
-for sg in M.SEGS:
-    idx = np.where((t >= sg['t0']) & (t < sg['t1']))[0]
-    if not len(idx):
-        continue
-    s = sg['f'](t[idx]); sp = sg['df'](t[idx])
-    src = games[sg['vid']]
-    game[idx] = np.interp(s * SR, np.arange(len(src)), src)
-    gain[idx] = ((sp > 0.8) & (sp < 1.35)).astype(np.float32)
-    # short fade around every cut so the remapped audio never clicks
-    edge = int(0.012 * SR)
-    gain[idx[:edge]] *= np.linspace(0, 1, min(edge, len(idx)))
-    gain[idx[-edge:]] *= np.linspace(1, 0, min(edge, len(idx)))
-k = int(0.04 * SR)
-gain = np.convolve(gain, np.ones(k) / k, 'same')
-game *= gain * 0.22
+
+
+def wsola():
+    L, Ha, tol = 1024, 512, 384
+    win = np.hanning(L + 1)[:L].astype(np.float32)        # periodic Hann: sums to 1 at 50% overlap
+    out = np.zeros(N + L, np.float32)
+    prev = None                                          # (vid, start) of previous grain
+    for o in range(0, N, Ha):
+        tc = (o + L / 2) / SR
+        sg = M.find_seg(min(tc, M.DUR - 1e-3))
+        src = games[sg['vid']]
+        sp = float(sg['df'](tc))
+        p = int(round(float(sg['f'](tc)) * SR - L / 2))
+        if prev is not None and prev[0] is sg:
+            q = prev[1] + Ha                             # natural continuation of last grain
+            ref = src[max(q, 0):max(q, 0) + L]
+            lo = max(p - tol, 0)
+            cand = src[lo:p + tol + L]
+            if len(ref) == L and len(cand) >= L:
+                c = np.correlate(cand, ref, 'valid')
+                p = lo + int(np.argmax(c))
+        g = src[max(p, 0):max(p, 0) + L]
+        if len(g) < L:
+            g = np.pad(g, (0, L - len(g)))
+        gain = 1.0 if sp > 0.5 else 0.75                 # a touch lower in deep slow-mo
+        out[o:o + L] += win * g * gain
+        prev = (sg, p)
+    return out[:N]
+
+
+game = wsola() * GAME_GAIN
 
 
 def boom(dur, amp):
@@ -52,16 +73,19 @@ def boom(dur, amp):
 
 sfx = np.zeros(N, np.float32)
 for t0 in M.IMPACTS:
-    amp = 0.42 if abs(t0 - M.B(160)) < 0.01 else (0.34 if abs(t0 - M.B(176)) < 0.01 else 0.26)
+    amp = 0.32 if abs(t0 - M.B(160)) < 0.01 else 0.2
     b = boom(1.2, amp); i = int(t0 * SR)
     sfx[i:i + len(b)] += b[:max(0, N - i)]
 
-mix = music * 0.88 + (game + sfx)[:, None]
+mix = music * MUSIC_GAIN + (game + sfx)[:, None]
 fade = np.clip((M.DUR - 0.05 - t) / 0.85, 0, 1) ** 1.5
 fade *= np.clip(t / 0.05, 0, 1)
 mix *= fade[:, None]
-mix = np.clip(mix, -1, 1)
+mix *= 0.7          # headroom: written at -3 dB, ffmpeg brings it back up through a limiter
+assert np.abs(mix).max() < 1.0
 out = os.path.join(ROOT, 'out/mix.wav')
 w = wave.open(out, 'wb'); w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
 w.writeframes((mix * 32767).astype(np.int16).tobytes()); w.close()
-print('wrote', out, 'peak', np.abs(mix).max())
+gr = 20 * np.log10(np.sqrt(np.mean(game ** 2)) + 1e-9)
+mr = 20 * np.log10(np.sqrt(np.mean((music * MUSIC_GAIN) ** 2)) + 1e-9)
+print('wrote', out, 'peak %.2f' % np.abs(mix).max(), 'music rms %.1f dB, game rms %.1f dB' % (mr, gr))
