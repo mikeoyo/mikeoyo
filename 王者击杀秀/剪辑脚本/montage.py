@@ -83,16 +83,15 @@ FLASH = []    # (T, amount)
 for i in range(7):
     PUNCH.append((B(12 + 8 * i), 1.15))
 for b in (4, 5, 6, 7):
-    PUNCH.append((B(b), 1.2)); FLASH.append((B(b), 0.7))
+    PUNCH.append((B(b), 1.2))
 # multi-kill beats (2nd/3rd/4th/5th kill of a streak hit harder)
 MULTI = [(B(80), 1.3), (B(84), 1.6), (B(103), 1.3), (B(116), 1.6),
          (B(154), 1.3), (B(160), 1.5), (B(164), 1.8), (B(180), 2.0)]
 PUNCH += [(B(72), 1.1), (B(100), 1.1), (B(150), 1.15)] + MULTI
 IMPACTS = [t for t, _ in MULTI]          # sub-boom SFX in the audio mix
 FINAL_KILL = B(180)
-FLASH += [(B(64), 0.9), (B(128), 0.9), (B(8), 0.6)]
-for t, s in PUNCH:
-    FLASH.append((t, 0.25 + 0.15 * s))
+# white flash only on five moments: the two drops, the two triple finishers, the final kill
+FLASH += [(B(64), 0.5), (B(128), 0.5), (B(84), 0.3), (B(116), 0.3), (FINAL_KILL, 0.4)]
 DROPS = [B(64), B(128)]
 CUTS = [(sg['t0'], sg['cut']) for sg in SEGS[1:]]
 RISERS = [(B(60), B(64)), (B(124), B(128))]
