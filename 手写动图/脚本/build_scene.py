@@ -69,13 +69,19 @@ def glyph(canvas, ch, x, base, size, seed, ink=1.0):
     rot = r.uniform(-3.5, 3.5)
     dy = r.uniform(-3, 3)
     if ch in '∵∴':                                         # three dots
-        h = sz * 0.42; w = sz * 0.42
-        pts = [(x + w * 0.5, base - h), (x, base), (x + w, base)] if ch == '∴' else \
-              [(x, base - h), (x + w, base - h), (x + w * 0.5, base)]
+        # sized like a character and sitting on the same baseline as the writing,
+        # each dot a short pen dab rather than a perfect disc
+        h = sz * 0.34; w = sz * 0.36; lift = sz * 0.06
+        bot = base - lift + dy
+        pts = [(x + w * 0.5, bot - h), (x, bot), (x + w, bot)] if ch == '∴' else \
+              [(x, bot - h), (x + w, bot - h), (x + w * 0.5, bot)]
         for (px, py) in pts:
-            px += r.uniform(-2, 2); py += r.uniform(-2, 2) + dy
-            cv2.circle(canvas, (int(px), int(py)), max(3, int(sz * 0.045)), 1.0, -1, cv2.LINE_AA)
-        return w + sz * 0.32
+            px += r.uniform(-1.5, 1.5); py += r.uniform(-1.5, 1.5)
+            ln = sz * r.uniform(0.02, 0.045); an = r.uniform(-0.6, 0.3)
+            stroke(canvas, [(px - ln * math.cos(an), py - ln * math.sin(an)),
+                            (px + ln * math.cos(an), py + ln * math.sin(an))],
+                   width=sz * 0.085, wobble=0.0, seed=int(r.integers(1 << 30)))
+        return w + sz * 0.16
     if ch == '∠':                                          # quick "<" with a base stroke
         h = sz * 0.5; w = sz * 0.52
         stroke(canvas, [(x + w, base - h + dy), (x + r.uniform(0, 4), base + dy - 2),
