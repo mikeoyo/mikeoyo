@@ -159,10 +159,10 @@ def notebook_page():
     # ---- the proof
     X0, K0 = 330, 9
     write(ink, '证明:', X0, ruled_y(K0) - 12, 82, 101)
-    write(ink, '∵ 我喜欢你', X0 + 25, ruled_y(K0 + 1) - 12, 82, 102)
-    end3 = write(ink, '∴ ∠L + ∠O + ∠V + ∠e', X0 - 15, ruled_y(K0 + 2) - 12, 92, 103, spacing=1.02)
-    write(ink, '= 520°', X0 + 75, ruled_y(K0 + 3) - 12, 96, 104)
-    write(ink, '∴ Love = 520.', X0 + 45, ruled_y(K0 + 4) - 12, 96, 105)
+    write(ink, '∵ 我喜欢你', X0 + 20, ruled_y(K0 + 1) - 12, 82, 102)
+    end3 = write(ink, '∴ ∠L + ∠O + ∠V + ∠e', X0 + 28, ruled_y(K0 + 2) - 12, 92, 103, spacing=1.02)
+    write(ink, '= 520°', X0 + 108, ruled_y(K0 + 3) - 12, 96, 104)
+    write(ink, '∴ Love = 520.', X0 + 78, ruled_y(K0 + 4) - 12, 96, 105)
 
     # ---- the figure (same construction as the reference: ABCD with diagonals meeting at O,
     #      dashed outline through L, e, V)

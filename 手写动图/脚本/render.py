@@ -19,7 +19,7 @@ def page2scene(u, v):
 
 
 FOCUS = page2scene(1150, 1150)          # between the proof and the figure
-FOC = 1150.0                            # focal length in output px (phone main camera, 4:3)
+FOC = 1500.0                            # focal length in output px (phone camera, slight zoom)
 
 
 def homography(P, d, tilt, yaw, roll):
@@ -38,9 +38,10 @@ def homography(P, d, tilt, yaw, roll):
     return K @ np.column_stack([R[:, 0], R[:, 1], tv])
 
 
-KEY = dict(dx=0.0, dy=0.0, d=1750.0, tilt=38.0, yaw=0.0, roll=0.0)
+# phone pointed along the page and held at an angle, so the page grid stays square in the frame
+KEY = dict(dx=0.0, dy=0.0, d=2280.0, tilt=38.0, yaw=20.0, roll=-15.0)
 # start of the live clip: the phone is higher, further back and turned a little
-LIVE0 = dict(dx=-220.0, dy=-380.0, d=2900.0, tilt=45.0, yaw=-7.0, roll=4.0)
+LIVE0 = dict(dx=-220.0, dy=-380.0, d=3780.0, tilt=45.0, yaw=13.0, roll=-11.0)
 T_STILL1, T_FADE, T_MOVE_END = 2.9, 0.3, 6.35
 
 
